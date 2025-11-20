@@ -8,6 +8,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
+[![AI Generated](https://img.shields.io/badge/AI-Generated-blueviolet.svg)](https://www.anthropic.com/claude)
+[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-5A67D8.svg)](https://www.anthropic.com/claude/code)
 
 > CLI tool for querying AWS Knowledge MCP Server - search, read, and discover AWS documentation
 
@@ -54,6 +56,7 @@ The AWS Knowledge MCP Server is a remote MCP (Model Context Protocol) server tha
 - 💡 **Recommend** - Discover related documentation
 - 📊 **Multi-Level Verbosity** - Progressive logging detail (-v/-vv/-vvv)
 - 🐚 **Shell Completion** - Tab completion for bash, zsh, and fish
+- 🔒 **Security Scanning** - Automated secret detection, code security, and dependency checks
 - 🤖 **Agent-Friendly** - Structured JSON output, clear error messages
 - 🔗 **Composable** - Stdin support for pipeline workflows
 - 📋 **Multiple Formats** - JSON and markdown output
@@ -359,11 +362,38 @@ make format      # Format with ruff
 make lint        # Lint with ruff
 make typecheck   # Type check with mypy
 make test        # Run pytest
-make check       # Run all checks
+make check       # Run all checks (lint + typecheck + test + security)
+
+# Security scanning
+make security-bandit      # Python security linter
+make security-pip-audit   # Dependency vulnerability scanner
+make security-gitleaks    # Secret and API key detection
+make security             # Run all security checks
 
 # Build and install
-make pipeline    # format + check + build + install-global
+make pipeline    # format + lint + typecheck + test + security + build + install-global
 ```
+
+### Security Scanning
+
+The project includes three lightweight security tools that provide 80%+ coverage:
+
+| Tool | Purpose | Speed | Coverage |
+|------|---------|-------|----------|
+| **bandit** | Python code security linting | ⚡⚡ Fast | SQL injection, hardcoded secrets, unsafe functions |
+| **pip-audit** | Dependency vulnerability scanning | ⚡⚡ Fast | Known CVEs in dependencies |
+| **gitleaks** | Secret and API key detection | ⚡⚡⚡ Very Fast | Secrets in code and git history |
+
+**Prerequisites for gitleaks:**
+```bash
+# macOS
+brew install gitleaks
+
+# Linux
+# See: https://github.com/gitleaks/gitleaks#installation
+```
+
+All security checks run automatically in `make check` and `make pipeline`.
 
 ## Known Issues
 

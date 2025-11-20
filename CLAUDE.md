@@ -72,9 +72,26 @@ make format      # Auto-format with ruff
 make lint        # Lint with ruff
 make typecheck   # Type check with mypy (strict)
 make test        # Run pytest suite
-make check       # Run all checks (lint + typecheck + test)
-make pipeline    # Full workflow: format, check, build, install-global
+make check       # Run all checks (lint + typecheck + test + security)
+make pipeline    # Full workflow: format, lint, typecheck, test, security, build, install-global
 ```
+
+### Security Scanning
+```bash
+make security-bandit      # Python security linting (SQL injection, hardcoded secrets)
+make security-pip-audit   # Dependency vulnerability scanning (CVEs)
+make security-gitleaks    # Secret/API key detection in code and git history
+make security             # Run all security checks
+```
+
+**Security Tools**:
+- **bandit** - Fast Python security linter (~2-3 seconds)
+- **pip-audit** - Official PyPA dependency vulnerability scanner (~2-3 seconds)
+- **gitleaks** - Blazing fast secret detection (~1 second)
+
+**Prerequisites**: Install gitleaks separately (`brew install gitleaks` on macOS)
+
+All security checks are integrated into `make check` and `make pipeline`.
 
 ### Build & Install
 ```bash
