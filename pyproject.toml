@@ -1,10 +1,11 @@
 [project]
 name = "aws-knowledge-tool"
 version = "0.1.0"
-description = "A CLI that queries the AWS knowledge base"
+description = "CLI tool for querying AWS Knowledge MCP Server - search, read, and discover AWS documentation"
 requires-python = ">=3.14"
 dependencies = [
     "click>=8.1.7",
+    "requests>=2.31.0",
 ]
 authors = [
     {name = "Dennis Vriend", email = "dvriend@ilionx.com"}
@@ -24,6 +25,7 @@ dev = [
     "ruff>=0.8.0",
     "mypy>=1.7.0",
     "pytest>=7.4.0",
+    "types-requests>=2.31.0",
 ]
 
 [tool.ruff]

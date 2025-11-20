@@ -4,83 +4,343 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue.svg)](https://github.com/python/mypy)
-[![AI Generated](https://img.shields.io/badge/AI-Generated-blueviolet.svg)](https://www.anthropic.com/claude)
-[![Built with Claude Code](https://img.shields.io/badge/Built_with-Claude_Code-5A67D8.svg)](https://www.anthropic.com/claude/code)
 
-A CLI that queries the AWS knowledge base
+> CLI tool for querying AWS Knowledge MCP Server - search, read, and discover AWS documentation
 
 ## Table of Contents
 
 - [About](#about)
 - [Features](#features)
 - [Installation](#installation)
-- [Usage](#usage)
+- [Quick Start](#quick-start)
+- [Commands](#commands)
+- [Library Usage](#library-usage)
 - [Development](#development)
-- [Testing](#testing)
-- [Contributing](#contributing)
-- [License](#license)
-- [Author](#author)
+- [Known Issues](#known-issues)
+- [Resources](#resources)
 
 ## About
 
-`aws-knowledge-tool` is a Python CLI tool built with modern tooling and best practices.
+`aws-knowledge-tool` is a **CLI-first** tool that provides programmatic access to AWS documentation through the [AWS Knowledge MCP Server](https://knowledge-mcp.global.api.aws). It features an **agent-friendly design** with composable commands, structured output, and pipeline support.
+
+### What is AWS Knowledge MCP Server?
+
+The AWS Knowledge MCP Server is a remote MCP (Model Context Protocol) server that provides access to:
+- AWS Documentation
+- AWS Blogs  
+- AWS Solutions Library
+- AWS Architecture Center
+- AWS Prescriptive Guidance
+
+**Server**: `https://knowledge-mcp.global.api.aws`  
+**Protocol**: MCP (JSON-RPC 2.0 over HTTP)  
+**Authentication**: None (public, rate-limited)
+
+### Why CLI-First?
+
+- **Agent-Friendly**: Structured commands and error messages enable AI agents (Claude Code, etc.) to reason and act effectively
+- **Composable**: JSON output and stderr separation allow easy piping and integration
+- **Reusable**: Commands serve as building blocks for skills, automation, and workflows
+- **Reliable**: Type-safe, tested, and predictable behavior
 
 ## Features
 
-- ✅ Type-safe with mypy strict mode
-- ✅ Linted with ruff
-- ✅ Tested with pytest
-- ✅ Modern Python tooling (uv, mise, click)
+- 🔍 **Search** - Search AWS documentation with pagination
+- 📖 **Read** - Fetch and convert AWS docs to markdown
+- 💡 **Recommend** - Discover related documentation
+- 📊 **Multi-Level Verbosity** - Progressive logging detail (-v/-vv/-vvv)
+- 🐚 **Shell Completion** - Tab completion for bash, zsh, and fish
+- 🤖 **Agent-Friendly** - Structured JSON output, clear error messages
+- 🔗 **Composable** - Stdin support for pipeline workflows
+- 📋 **Multiple Formats** - JSON and markdown output
+- 🎯 **Type-Safe** - Strict mypy checks, comprehensive type hints
+- ✅ **Well-Tested** - Pytest suite with quality checks
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.14 or higher
+- Python 3.14+
 - [uv](https://github.com/astral-sh/uv) package manager
 
-### Install from source
+### Install Globally
 
 ```bash
-# Clone the repository
+# Clone and install
 git clone https://github.com/dnvriend/aws-knowledge-tool.git
 cd aws-knowledge-tool
-
-# Install globally with uv
 uv tool install .
-```
 
-### Install with mise (recommended for development)
-
-```bash
-cd aws-knowledge-tool
-mise trust
-mise install
-uv sync
-uv tool install .
-```
-
-### Verify installation
-
-```bash
+# Verify installation
 aws-knowledge-tool --version
+
+# Optional: Install shell completion
+eval "$(aws-knowledge-tool completion bash)"  # For bash
+eval "$(aws-knowledge-tool completion zsh)"   # For zsh
 ```
 
-## Usage
-
-### Basic Usage
+## Quick Start
 
 ```bash
-# Show help
-aws-knowledge-tool --help
+# Search AWS documentation
+aws-knowledge-tool search "Lambda function URLs"
 
-# Run the tool
-aws-knowledge-tool
+# Read a documentation page  
+aws-knowledge-tool read "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html"
+
+# Get recommendations
+aws-knowledge-tool recommend "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html" --type new
+
+# Pipeline composition
+aws-knowledge-tool search "Lambda" --json | jq -r '.[0].url' | aws-knowledge-tool read --stdin
+```
+
+## Commands
+
+### search - Search AWS Documentation
+
+```bash
+aws-knowledge-tool search QUERY [OPTIONS]
+
+Options:
+  -l, --limit INTEGER    Maximum results (default: 10)
+  -o, --offset INTEGER   Skip first N results (default: 0)
+  --json                 Output JSON format
+  --stdin                Read query from stdin
+  -v, --verbose          Enable verbose output (use -v for INFO, -vv for DEBUG, -vvv for TRACE)
+  -q, --quiet            Suppress non-essential output
+
+Examples:
+  # Basic search
+  aws-knowledge-tool search "S3 versioning" --limit 5
+
+  # With INFO logging (-v)
+  aws-knowledge-tool search "DynamoDB" -v
+
+  # With DEBUG logging and full tracebacks (-vv)
+  aws-knowledge-tool search "Lambda" -vv
+
+  # With TRACE logging (includes library internals) (-vvv)
+  aws-knowledge-tool search "RDS" -vvv
+
+  # JSON output for pipelines
+  aws-knowledge-tool search "Lambda" --json
+
+  # Read from stdin
+  echo "Lambda" | aws-knowledge-tool search --stdin
+```
+
+### read - Read AWS Documentation
+
+```bash
+aws-knowledge-tool read URL [OPTIONS]
+
+Options:
+  -s, --start-index INT  Starting character index
+  -m, --max-length INT   Maximum characters to fetch
+  --json                 Output JSON format
+  --stdin                Read URL from stdin
+  -v, --verbose          Enable verbose output (use -v for INFO, -vv for DEBUG, -vvv for TRACE)
+  -q, --quiet            Suppress non-essential output
+
+Examples:
+  # Read full document
+  aws-knowledge-tool read "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html"
+
+  # Read with pagination
+  aws-knowledge-tool read "https://docs.aws.amazon.com/..." --start-index 5000 --max-length 2000
+
+  # Pipeline from search
+  aws-knowledge-tool search "Lambda" --json | jq -r '.[0].url' | aws-knowledge-tool read --stdin
+
+  # With DEBUG logging
+  aws-knowledge-tool read "https://docs.aws.amazon.com/..." -vv
+```
+
+### recommend - Get Documentation Recommendations
+
+```bash
+aws-knowledge-tool recommend URL [OPTIONS]
+
+Options:
+  -t, --type TYPE        Filter by type (highly_rated, new, similar, journey)
+  -l, --limit INTEGER    Max results per category (default: 5)
+  -o, --offset INTEGER   Skip first N per category (default: 0)
+  --json                 Output JSON format
+  --stdin                Read URL from stdin
+  -v, --verbose          Enable verbose output (use -v for INFO, -vv for DEBUG, -vvv for TRACE)
+  -q, --quiet            Suppress non-essential output
+
+Examples:
+  # Get all recommendations
+  aws-knowledge-tool recommend "https://docs.aws.amazon.com/lambda/latest/dg/welcome.html"
+
+  # Filter by type (find new features)
+  aws-knowledge-tool recommend "https://docs.aws.amazon.com/..." --type new
+
+  # Limit results and JSON output
+  aws-knowledge-tool recommend "https://docs.aws.amazon.com/..." --json --limit 3
+
+  # With INFO logging
+  aws-knowledge-tool recommend "https://docs.aws.amazon.com/..." -v
+```
+
+## Multi-Level Verbosity Logging
+
+Control logging detail with progressive verbosity flags. All logs output to stderr, keeping stdout clean for data.
+
+### Logging Levels
+
+| Flag | Level | Output | Use Case |
+|------|-------|--------|----------|
+| (none) | WARNING | Errors and warnings only | Production, quiet mode |
+| `-v` | INFO | + High-level operations | Normal debugging |
+| `-vv` | DEBUG | + Detailed info, full tracebacks | Development, troubleshooting |
+| `-vvv` | TRACE | + Library internals (MCP, httpx) | Deep debugging |
+
+### Examples
+
+```bash
+# Quiet mode - only errors and warnings
+aws-knowledge-tool search "Lambda"
+
+# INFO - see operations and progress
+aws-knowledge-tool search "Lambda" -v
+# Output:
+# [INFO] Search command started
+# [INFO] Searching for: Lambda
+# [INFO] Found 10 results
+
+# DEBUG - see detailed information and full tracebacks
+aws-knowledge-tool search "Lambda" -vv
+# Output:
+# [INFO] Search command started
+# [INFO] Searching for: Lambda
+# [DEBUG] Parameters: limit=10, offset=0
+# [DEBUG] Connecting to AWS Knowledge MCP Server...
+# [DEBUG] Connected. Searching...
+# [DEBUG] Search API call complete
+# [INFO] Found 10 results
+
+# TRACE - see library internals (MCP, httpx, httpcore, anyio logs)
+aws-knowledge-tool search "Lambda" -vvv
+# Output: Same as -vv plus httpx request/response logs
+```
+
+### Integration with Pipelines
+
+Logging to stderr allows clean pipeline composition:
+
+```bash
+# Data to stdout, logs to stderr - perfect for pipelines
+aws-knowledge-tool search "Lambda" --json -v | jq -r '.[0].url' | aws-knowledge-tool read --stdin -v
+```
+
+## Shell Completion
+
+The tool provides native shell completion for bash, zsh, and fish shells, following the same pattern as popular tools like kubectl and docker.
+
+### Supported Shells
+
+| Shell | Version Requirement | Status |
+|-------|-------------------|--------|
+| **Bash** | ≥ 4.4 | ✅ Supported |
+| **Zsh** | Any recent version | ✅ Supported |
+| **Fish** | ≥ 3.0 | ✅ Supported |
+| **PowerShell** | Any version | ❌ Not Supported |
+
+### Installation
+
+#### Quick Setup (Temporary)
+
+```bash
+# Bash - active for current session only
+eval "$(aws-knowledge-tool completion bash)"
+
+# Zsh - active for current session only
+eval "$(aws-knowledge-tool completion zsh)"
+
+# Fish - active for current session only
+aws-knowledge-tool completion fish | source
+```
+
+#### Permanent Setup (Recommended)
+
+```bash
+# Bash - add to ~/.bashrc
+echo 'eval "$(aws-knowledge-tool completion bash)"' >> ~/.bashrc
+source ~/.bashrc
+
+# Zsh - add to ~/.zshrc
+echo 'eval "$(aws-knowledge-tool completion zsh)"' >> ~/.zshrc
+source ~/.zshrc
+
+# Fish - save to completions directory
+mkdir -p ~/.config/fish/completions
+aws-knowledge-tool completion fish > ~/.config/fish/completions/aws-knowledge-tool.fish
+```
+
+#### File-based Installation (Better Performance)
+
+For better shell startup performance, generate completion scripts to files:
+
+```bash
+# Bash
+aws-knowledge-tool completion bash > ~/.aws-knowledge-tool-complete.bash
+echo 'source ~/.aws-knowledge-tool-complete.bash' >> ~/.bashrc
+
+# Zsh
+aws-knowledge-tool completion zsh > ~/.aws-knowledge-tool-complete.zsh
+echo 'source ~/.aws-knowledge-tool-complete.zsh' >> ~/.zshrc
+
+# Fish (automatic loading from completions directory)
+mkdir -p ~/.config/fish/completions
+aws-knowledge-tool completion fish > ~/.config/fish/completions/aws-knowledge-tool.fish
+```
+
+### Usage
+
+Once installed, completion works automatically:
+
+```bash
+# Tab completion for commands
+aws-knowledge-tool <TAB>
+# Shows: search read recommend completion
+
+# Tab completion for options
+aws-knowledge-tool search --<TAB>
+# Shows: --limit --offset --json --stdin --verbose --quiet --help
+
+# Tab completion for shell types
+aws-knowledge-tool completion <TAB>
+# Shows: bash zsh fish
+```
+
+### Getting Help
+
+```bash
+# View completion installation instructions
+aws-knowledge-tool completion --help
+```
+
+## Library Usage
+
+Use `aws-knowledge-tool` as a Python library:
+
+```python
+import asyncio
+from aws_knowledge_tool import MCPClient
+
+async def search_docs():
+    async with MCPClient() as client:
+        results = await client.search_documentation("Lambda functions", limit=5)
+        for result in results:
+            print(f"{result['title']}: {result['url']}")
+
+asyncio.run(search_docs())
 ```
 
 ## Development
-
-### Setup Development Environment
 
 ```bash
 # Clone repository
@@ -90,100 +350,52 @@ cd aws-knowledge-tool
 # Install dependencies
 make install
 
-# Show available commands
-make help
+# Run quality checks
+make format      # Format with ruff
+make lint        # Lint with ruff
+make typecheck   # Type check with mypy
+make test        # Run pytest
+make check       # Run all checks
+
+# Build and install
+make pipeline    # format + check + build + install-global
 ```
 
-### Available Make Commands
+## Known Issues
 
-```bash
-make install          # Install dependencies
-make format           # Format code with ruff
-make lint             # Run linting with ruff
-make typecheck        # Run type checking with mypy
-make test             # Run tests with pytest
-make check            # Run all checks (lint, typecheck, test)
-make pipeline         # Run full pipeline (format, lint, typecheck, test, build, install-global)
-make build            # Build package
-make run ARGS="..."   # Run aws-knowledge-tool locally
-make clean            # Remove build artifacts
-```
+### MCP HTTP Transport
 
-### Project Structure
+**Issue**: The current MCP Python SDK implementation uses stdio-based transport (read_stream/write_stream) rather than HTTP transport. The tool currently uses a stub implementation with memory streams for type checking.
 
-```
-aws-knowledge-tool/
-├── aws_knowledge_tool/    # Main package
-│   ├── __init__.py
-│   ├── cli.py          # CLI entry point
-│   └── utils.py        # Utility functions
-├── tests/              # Test suite
-│   ├── __init__.py
-│   └── test_utils.py
-├── pyproject.toml      # Project configuration
-├── Makefile            # Development commands
-├── README.md           # This file
-├── LICENSE             # MIT License
-└── CLAUDE.md           # Development documentation
-```
+**Impact**: The tool will not connect to the AWS Knowledge MCP Server until proper HTTP transport is implemented.
 
-## Testing
+**Workaround**: Implementation needs the MCP SDK's HTTP client wrapper or custom HTTP-to-stream adapter.
 
-Run the test suite:
+**TODO**:
+- Investigate MCP Python SDK HTTP transport documentation
+- Implement proper HTTP client using anyio streams or httpx adapter
+- See: https://github.com/modelcontextprotocol/python-sdk
 
-```bash
-# Run all tests
-make test
+**Code Location**: `aws_knowledge_tool/core/mcp_client.py:39-63`
 
-# Run tests with verbose output
-uv run pytest tests/ -v
+## Resources
 
-# Run specific test file
-uv run pytest tests/test_utils.py
-
-# Run with coverage
-uv run pytest tests/ --cov=aws_knowledge_tool
-```
-
-## Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run the full pipeline (`make pipeline`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-### Code Style
-
-- Follow PEP 8 guidelines
-- Use type hints for all functions
-- Write docstrings for public functions
-- Format code with `ruff`
-- Pass all linting and type checks
+- **AWS Knowledge MCP Server**: `https://knowledge-mcp.global.api.aws`
+- **MCP Specification**: https://modelcontextprotocol.io
+- **MCP Python SDK**: https://github.com/modelcontextprotocol/python-sdk
+- **AWS Documentation**: https://docs.aws.amazon.com
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) file
 
 ## Author
 
-**Dennis Vriend**
-
-- GitHub: [@dnvriend](https://github.com/dnvriend)
-
-## Acknowledgments
-
-- Built with [Click](https://click.palletsprojects.com/) for CLI framework
-- Developed with [uv](https://github.com/astral-sh/uv) for fast Python tooling
+**Dennis Vriend**  
+GitHub: [@dnvriend](https://github.com/dnvriend)
 
 ---
 
-**Generated with AI**
+🤖 **Built with [Claude Code](https://claude.com/claude-code)**
 
-This project was generated using [Claude Code](https://www.anthropic.com/claude/code), an AI-powered development tool by [Anthropic](https://www.anthropic.com/). Claude Code assisted in creating the project structure, implementation, tests, documentation, and development tooling.
-
-Made with ❤️ using Python 3.14
+This project was developed using Claude Code, an AI-powered development tool by Anthropic.
